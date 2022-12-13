@@ -158,27 +158,34 @@ def equilibrium_shock(alt:np.array, M:np.array, beta:np.array=None):
             eps_inc = -0.1 * eps_inc
         iter += 1
 
-    h_2 = h_2j
-    rho_2 = rho / eps
-    P_2 = P + (rho * ((u ** 2) * (1 - eps)))
-    [T_2,_, gamma] = composition_curve_fit(P_2, rho_2, 2)
-    u_2 = u * eps
-    h_2 = h_2 / 1000; # to return as kJ/kg
-    Cp = R_air * (gamma / (gamma - 1))
-    return [P_2, h_2, T_2, rho_2, u_2, Cp]
+    if iter >= max_iter:
+        return [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,]
+    else:
+        h_2 = h_2j
+        rho_2 = rho / eps
+        P_2 = P + (rho * ((u ** 2) * (1 - eps)))
+        [T_2,_, gamma] = composition_curve_fit(P_2, rho_2, 2)
+        u_2 = u * eps
+        h_2 = h_2 / 1000; # to return as kJ/kg
+        Cp = R_air * (gamma / (gamma - 1))
+        return [P_2, h_2, T_2, rho_2, u_2, Cp]
 
-def oblique_shock_angle(theta_c: np.array, alt:np.array, M:np.array, u_1: float, gamma: float=1.4):
+def oblique_shock_angle(theta_c: np.array, alt:np.array, M:np.array, u_1: float, gamma: float=1.4, show_output: bool=False):
     beta = np.array([])
 
-    for theta in np.deg2rad(theta_c):
+    for idx, theta in enumerate(np.deg2rad(theta_c)):
         def f(B):
             [_, _, _, _, u_2n, _] = equilibrium_shock(alt=alt, M=M, beta=np.array([B]))
-            return (np.tan(B - theta)/np.tan(B)) - (u_2n[0] / (u_1 * np.sin(B)))
+            u_2 = u_2n[0]/np.sin(B)
+            return (np.tan(B - theta)/np.tan(B)) - (u_2/u_1)
         B = np.deg2rad(theta)
         B = optimize.root(f, [B], method='hybr')
         sol = np.nan
         if B.success:
             sol = np.rad2deg(B.x)
+        else:
+            if show_output:
+                print("No Solution at point ", idx)
         beta = np.append(beta, sol)
         
     return beta

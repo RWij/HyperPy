@@ -19,7 +19,7 @@ species_model = {
 }
 
 def get_downstream_oblique_shock_conditions(alt:float, M:float, u_1: float, theta_c: np.array, show_output: bool=False):
-    beta = oblique_shock_angle(theta_c=theta_c, u_1=u_1, alt=np.array([alt]), M=np.array([M]))
+    beta = oblique_shock_angle(theta_c=theta_c, u_1=u_1, alt=np.array([alt]), M=np.array([M]), show_output=show_output)
     P = h = T = rho = u = Cp = np.array([])
     if show_output:
         print("\n{:12s}\t{:15s} {:15s} {:15s} {:15s} {:15s} {:15s}".format("ObSA (deg.)", "P E5 (Pa)", "T (K)", "h (kJ/kg)", "rho E-1 (kg/m^3)", "u (m/s)", "Cp (kJ/kg)"))
@@ -138,9 +138,12 @@ def run_point_design(
                     [_, oP_2, oh_2, oT_2, orho_2, ou_2, oCp_2] = get_downstream_oblique_shock_conditions(alt=valt,M=mach,u_1=u_1,theta_c=geom[1:,1],show_output=show_output)
                     eps = np.append(rho_inf/rho_2, rho_inf / orho_2)
                     bP_2 = oP_2; bh_2 = oh_2; bT_2 = oT_2; bu_2 = ou_2; bCp_2 = oCp_2; brho_2 = orho_2
-                    # Since the since the oblique shock is 0 deg at the end point of the geometry, the downstream velocity, 'ou_2', = 0.
-                    # This will give 'inf' or 'nan' as answer for heat flux in the reference method calculation, so will copy the 2nd to last
-                    # downstream conditions to give the illusion that the downstream conditions behind the vehicle continue on 
+                    # Since the front part of the geometry is expected to have a bow shock, the stagnation 
+                    # point conditions will be added to the front of the numpy array
+                    if len(body_coords) != len(oP_2):
+                        for i in range(abs(len(body_coords) - len(oP_2))):
+                            bP_2 = np.append(P_2[-1],bP_2); bh_2 = np.append(h_2[-1],bh_2); bT_2 = np.append(T_2,bT_2); 
+                            bu_2 = np.append(u_2[-1],bu_2); bCp_2 = np.append(Cp_2,bCp_2); brho_2 = np.append(rho_2[-1],brho_2)
                 else:
                     eps = (rho_inf/rho_2) * np.ones(len(geom))
                     bP_2 = P_2 * np.ones(len(body_coords))
